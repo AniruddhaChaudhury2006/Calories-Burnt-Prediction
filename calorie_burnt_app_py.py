@@ -15,7 +15,10 @@ from sklearn.model_selection import train_test_split
 from xgboost import XGBRegressor
 from sklearn import metrics
 import streamlit as st
-st.title("🔥 Calories Burnt Prediction App")
+import time
+st.set_page_config(page_title = 'AI Calories Burn Predictor', page_icon = '🔥', layout = 'wide')
+st.title("🔥 AI Powered Calories Burnt Prediction App")
+st.write("Predict calories burned during exercise using Machine Learning")
 calories = pd.read_csv('calories.csv')
 exercise_data = pd.read_csv('exercise.csv')
 calories_data = pd.concat([exercise_data, calories['Calories']], axis = 1)
@@ -26,37 +29,63 @@ X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.2, rando
 model = XGBRegressor()
 model.fit(X_train,Y_train)
 st.sidebar.header("Input Features")
-gender = st.sidebar.selectbox("Gender", ["Male","Female"])
-gender_value = 0 if gender == "Male" else 1
-age = st.sidebar.number_input("Age", 10, 100)
-height = st.sidebar.number_input("Height (cm)", 100.0, 220.0)
-weight = st.sidebar.number_input("Weight (kg)", 30.0, 150.0)
-duration = st.sidebar.number_input("Exercise Duration (minutes)", 1.0, 120.0)
-heart_rate = st.sidebar.number_input("Heart Rate", 60.0, 200.0)
-body_temp = st.sidebar.number_input("Body Temperature (°C)", 35.0, 42.0)
+col1, col2 = st.columns(2)
+with col1:
+    gender = st.sidebar.selectbox("Gender", ["Male","Female"])
+    gender_value = 0 if gender == "Male" else 1
+    age = st.sidebar.number_input("Age", 10, 100)
+    height = st.sidebar.number_input("Height (cm)", 100.0, 220.0)
+    weight = st.sidebar.number_input("Weight (kg)", 30.0, 150.0)
+with col2:
+    duration = st.sidebar.number_input("Exercise Duration (minutes)", 1.0, 120.0)
+    heart_rate = st.sidebar.number_input("Heart Rate", 60.0, 200.0)
+    body_temp = st.sidebar.number_input("Body Temperature (°C)", 35.0, 42.0)
 input_data = (gender_value,age,height,weight,duration,heart_rate,body_temp)
 input_data_as_numpy_array=np.asarray(input_data)
 input_data_reshaped=input_data_as_numpy_array.reshape(1,-1)
 prediction=model.predict(input_data_reshaped)
 if st.button("Predict Calories Burnt"):
     st.success(f"🔥 Estimated Calories Burnt: {prediction[0]:.2f}")
-
-print(X)
-print(Y)
-
-print(X.shape, X_train.shape, X_test.shape)
-
-
-
+    st.info("Prediction generated using XGBoost regression model")
+    st.subheader("💡 Smart Fitness Insight")
+    if prediction[0] < 150:
+       st.warning("Low calorie burn. Try increasing workout duration or intensity.")
+    elif prediction[0] < 300:
+       st.info("Moderate calorie burn. Great for regular fitness maintenance.")
+    else:
+       st.success("Excellent workout! You're burning a high number of calories.")
+st.subheader("Model Performance")
 test_data_prediction = model.predict(X_test)
-print(test_data_prediction)
-
-mae = metrics.mean_absolute_error(Y_test, test_data_prediction)
-print("Mean absolute error = ", mae)
-
-
-
-
+mae = metrics.mean_absolute_error(Y_test, X_data_prediction)
+st.metric("Mean absolute error: ", round(mae, 2))
+st.subheader("Feature Importance")
+importance = model.feature_importances_
+feature_df = pd.DataFrame({'Feature': X.columns, 'Importance': importance}).sort_values("Importance: ", ascending = False)
+fig, ax = plt.subplots()
+sns.barplot(x = 'Importance', y = 'Feature', data = feature_df, ax = ax)
+st.pyplot(fig)
+st.subheader("Data Visualization")
+fig, ax = plt.subplots()
+sns.histplot(calories_data['Calories'], kde = True, ax = ax)
+st.pyplot(fig)
+st.subheader("Correlation Heatmap")
+fig, ax = plt.subplots(figsize = (8, 5))
+sns.heatmap(calories_data.corr(), annot = True, cmap = 'coolwarm', ax = ax)
+st.pyplot(fig)
+st.subheader("📊 Workout Comparison")
+avg_calories = calories_data["Calories"].mean()
+comparison = pd.DataFrame({'Type': ["Your Workout", "Average Workout"], "Calories": [prediction[0], avg_calories]})
+st.bar_chart(comparison.set_index('Type'))
+st.subheader("🎯 Fitness Goal Planner")
+goal = st.selectbox("Select your goal",["Weight Loss", "Fitness Maintenance", "Muscle Gain"])
+if goal == "Weight Loss":
+    st.write("Recommended calorie burn per session: **300-500 calories**")
+elif goal == "Fitness Maintenance":
+    st.write("Recommended calorie burn per session: **200-350 calories**")
+elif goal == "Muscle Gain":
+    st.write("Recommended calorie burn per session: **150-300 calories**")
+with st.spinner("AI is analyzing your workout..."):
+    
 
 
 
