@@ -17,6 +17,19 @@ from sklearn import metrics
 import streamlit as st
 import time
 st.set_page_config(page_title = 'AI Calories Burn Predictor', page_icon = '🔥', layout = 'wide')
+st.markdown("""
+<style>
+.glass-card {
+background: linear-gradient(135deg,#ff4b2b,#ff416c);
+padding:20px;
+border-radius:15px;
+color:white;
+text-align:center;
+box-shadow:0 8px 20px rgba(0,0,0,0.2);
+}
+</style>
+""", unsafe_allow_html=True)
+prediction = [0]
 st.title("🔥 AI Powered Calories Burnt Prediction App")
 st.write("Predict calories burned during exercise using Machine Learning")
 calories = pd.read_csv('calories.csv')
@@ -34,7 +47,7 @@ def train_model():
 model = train_model()
 tab1, tab2, tab3 = st.tabs(["🔥 Prediction", "📊 Data Insights", "🤖 Model Analysis"])
 with tab1:
-    st.sidebar.header("Input Features")
+    st.header("Workout Input Features")
     col1, col2 = st.columns(2)
     with col1:
         gender = st.selectbox("Gender", ["Male","Female"])
@@ -47,20 +60,41 @@ with tab1:
         heart_rate = st.number_input("Heart Rate", 60.0, 200.0)
         body_temp = st.number_input("Body Temperature (°C)", 35.0, 42.0)
     input_data = (gender_value,age,height,weight,duration,heart_rate,body_temp)
-input_data_as_numpy_array=np.asarray(input_data)
-input_data_reshaped=input_data_as_numpy_array.reshape(1,-1)
-prediction = [0]
-if st.button("Predict Calories Burnt"):
-    with st.spinner("🤖 AI analyzing workout data..."):
-         time.sleep(2)
-         prediction=model.predict(input_data_reshaped)
-         st.success("Prediction Ready!")
-         st.subheader("🔥 Calories Burn Meter")
-         progress = int(min((prediction[0] / 500) * 100, 100))
-         st.progress(progress)
-         st.success(f"🔥 Estimated Calories Burnt: {prediction[0]:.2f}")
-         st.info("Prediction generated using XGBoost regression model")
-         st.subheader("💡 Smart Fitness Insight")
+    input_data_as_numpy_array=np.asarray(input_data)
+    input_data_reshaped=input_data_as_numpy_array.reshape(1,-1)
+    if st.button("Predict Calories Burnt"):
+       with st.spinner("🤖 AI analyzing workout data..."):
+            time.sleep(2)
+            prediction=model.predict(input_data_reshaped)
+            st.success("Prediction Ready!")
+            st.subheader("🔥 Calories Burn Meter")
+            progress = int(min((prediction[0] / 500) * 100, 100))
+            st.progress(progress)
+            st.success(f"🔥 Estimated Calories Burnt: {prediction[0]:.2f}")
+            st.info("Prediction generated using XGBoost regression model")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown(f"""
+                <div class="glass-card">
+                <h3>🔥 Calories</h3>
+                <h1>{prediction[0]:.2f}</h1>
+                </div>
+                """, unsafe_allow_html=True)
+            with col2:
+                 st.markdown(f"""
+                 <div class="glass-card">
+                 <h3>❤️ Heart Rate</h3>
+                 <h1>{heart_rate}</h1>
+                 </div>
+                 """, unsafe_allow_html=True)
+            with col3:
+                st.markdown(f"""
+                <div class="glass-card">
+                <h3>⏱ Duration</h3>
+                <h1>{duration}</h1>
+                </div>
+                """, unsafe_allow_html=True)
+            st.subheader("💡 Smart Fitness Insight")
          if prediction[0] < 150:
             st.warning("Low calorie burn. Try increasing workout duration or intensity.")
          elif prediction[0] < 300:
@@ -74,6 +108,11 @@ if st.button("Predict Calories Burnt"):
             st.write("💪 Intermediate Workout")
          else:
             st.write("🔥 Advanced Workout")
+    if prediction[0] != 0:
+       st.subheader("📊 Workout Comparison")
+       avg_calories = calories_data["Calories"].mean()
+       comparison = pd.DataFrame({'Type': ["Your Workout", "Average Workout"], "Calories": [prediction[0], avg_calories]})
+       st.bar_chart(comparison.set_index('Type'))
 with tab3:
     st.subheader("Model Performance")
     test_data_prediction = model.predict(X_test)
@@ -83,12 +122,6 @@ with tab3:
     importance = model.feature_importances_
     feature_df = pd.DataFrame({"Feature": X.columns, "Importance": importance}).sort_values("Importance", ascending=False)
     st.bar_chart(feature_df.set_index("Feature"))
-mae = metrics.mean_absolute_error(Y_test, test_data_prediction)
-st.metric("Mean absolute error: ", round(mae, 2))
-st.subheader("🤖 Feature Importance : What Influences Calories Burn?")
-importance = model.feature_importances_
-feature_df = pd.DataFrame({'Feature': X.columns, 'Importance': importance}).sort_values("Importance", ascending = False)
-st.bar_chart(feature_df.set_index('Feature'))
 with tab2:
     st.subheader("Data Visualization")
     fig, ax = plt.subplots()
@@ -98,11 +131,6 @@ with tab2:
     fig, ax = plt.subplots(figsize=(8,5))
     sns.heatmap(calories_data.corr(), annot=True, cmap="coolwarm", ax=ax)
     st.pyplot(fig)
-if prediction[0] != 0:
-    st.subheader("📊 Workout Comparison")
-    avg_calories = calories_data["Calories"].mean()
-    comparison = pd.DataFrame({'Type': ["Your Workout", "Average Workout"], "Calories": [prediction[0], avg_calories]})
-    st.bar_chart(comparison.set_index('Type'))
 st.subheader("🎯 Fitness Goal Planner")
 goal = st.selectbox("Select your goal",["Weight Loss", "Fitness Maintenance", "Muscle Gain"])
 if goal == "Weight Loss":
